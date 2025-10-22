@@ -10,7 +10,7 @@ services:
     # Nome do contêiner que será criado no Docker. Facilita a identificação.
     container_name: chat_postgres
 
-    # Variáveis de ambiente para configurar o banco de dados na primeira inicialização.
+
     environment:
       POSTGRES_USER: postgres          # O nome de usuário para se conectar.
       POSTGRES_PASSWORD: mysecretpassword # A senha para o usuário.
