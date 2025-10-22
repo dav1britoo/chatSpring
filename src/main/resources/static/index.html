@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Gemini Chat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8f9fa; --bg-secondary-color: #ffffff; --text-color: #212529;
+            --border-color: #dee2e6; --shadow-color: rgba(0, 0, 0, 0.05);
+            --primary-color: #4c6ef5; --primary-hover: #4263eb; --primary-light: #edf2ff;
+            --my-message-bg: var(--primary-color); --my-message-text: #ffffff;
+            --other-message-bg: #e9ecef; --other-message-text: #495057;
+        }
+        .dark-mode {
+            --bg-color: #1a1a1a; --bg-secondary-color: #2c2c2c; --text-color: #f8f9fa;
+            --border-color: #444; --shadow-color: rgba(0, 0, 0, 0.2);
+            --other-message-bg: #3c3c3c; --other-message-text: #e9ecef;
+        }
+        *, *::before, *::after { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif; background-color: var(--bg-color); color: var(--text-color);
+            margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .hidden { display: none !important; }
+        .app-container {
+            width: 100%; max-width: 800px; height: 95vh; max-height: 800px; background: var(--bg-secondary-color);
+            border-radius: 16px; box-shadow: 0 8px 32px var(--shadow-color);
+            display: flex; flex-direction: column; overflow: hidden; transition: background-color 0.3s;
+        }
+        /* Auth Screen */
+        #auth-page { padding: 40px; }
+        .auth-switcher { display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 25px; }
+        .auth-switcher button { flex: 1; padding: 15px; border: none; background: none; font-size: 16px; font-weight: 600; color: #868e96; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; }
+        .auth-switcher button.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .form-group { margin-bottom: 20px; text-align: left; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px; }
+        .form-group input { width: 100%; padding: 12px 15px; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 8px; font-size: 16px; transition: all 0.2s; }
+        .form-group input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); outline: none; }
+        .form-group button { width: 100%; padding: 14px; border: none; background-color: var(--primary-color); color: white; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        .form-group button:hover { background-color: var(--primary-hover); }
+        .form-group button:disabled { background-color: #868e96; cursor: not-allowed; }
+
+        /* Chat Screen */
+        .chat-header {
+            padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border-color); flex-shrink: 0;
+        }
+        #header-username { font-weight: 600; font-size: 18px; }
+        .header-controls a, .header-controls button {
+            color: var(--text-color); background: none; border: none; text-decoration: none;
+            font-size: 14px; font-weight: 500; cursor: pointer; margin-left: 15px;
+        }
+        .message-area { list-style-type: none; margin: 0; padding: 20px; flex-grow: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .chat-message { display: flex; gap: 10px; max-width: 75%; }
+        .avatar {
+            width: 40px; height: 40px; border-radius: 50%; background-color: var(--primary-color);
+            color: white; font-weight: 600; display: flex; align-items: center; justify-content: center;
+            text-transform: uppercase; flex-shrink: 0;
+        }
+        .message-content { display: flex; flex-direction: column; }
+        .message-content .sender { font-weight: 600; margin-bottom: 5px; font-size: 14px; }
+        .message-content .text {
+            padding: 10px 15px; border-radius: 18px; line-height: 1.5; word-wrap: break-word;
+            background-color: var(--other-message-bg); color: var(--other-message-text); border-top-left-radius: 4px;
+        }
+        .message-content .timestamp { font-size: 12px; color: #868e96; margin-top: 5px; }
+        .chat-message.my-message { align-self: flex-end; flex-direction: row-reverse; }
+        .chat-message.my-message .message-content .text { background-color: var(--my-message-bg); color: var(--my-message-text); border-top-left-radius: 18px; border-top-right-radius: 4px; }
+        .chat-message.my-message .message-content { align-items: flex-end; }
+        .event-message { align-self: center; text-align: center; color: #868e96; font-style: italic; font-size: 13px; padding: 5px 0; }
+
+        .message-form { display: flex; padding: 15px; background-color: var(--bg-secondary-color); border-top: 1px solid var(--border-color); flex-shrink: 0; }
+        #message-input { flex-grow: 1; padding: 12px 20px; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); border-radius: 25px; font-size: 16px; margin-right: 10px; transition: all 0.2s; }
+        #message-input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px var(--primary-light); outline: none; }
+        #message-form button {
+            width: 48px; height: 48px; border-radius: 50%; border: none; background-color: var(--primary-color);
+            color: white; font-size: 20px; cursor: pointer; transition: background-color 0.2s;
+            display: flex; justify-content: center; align-items: center;
+        }
+        #message-form button:hover { background-color: var(--primary-hover); }
+
+        #notification {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 25px; border-radius: 8px; color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2); z-index: 1000; font-weight: 500;
+            opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none;
+        }
+        #notification.show { opacity: 1; transform: translateX(-50%) translateY(10px); }
+    </style>
+</head>
+<body>
+
+<div id="auth-page" class="app-container">
+    <div class="auth-switcher">
+        <button id="show-login" class="active">Login</button>
+        <button id="show-register">Registrar</button>
+    </div>
+
+    <div id="login-section">
+        <form id="login-form" action="/login" method="post">
+            <div class="form-group">
+                <label for="login-username">Usuário</label>
+                <input id="login-username" name="username" type="text" required />
+            </div>
+            <div class="form-group">
+                <label for="login-password">Senha</label>
+                <input id="login-password" name="password" type="password" required />
+            </div>
+            <div class="form-group">
+                <button type="submit">Entrar</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="register-section" class="hidden">
+        <form id="register-form">
+            <div class="form-group">
+                <label for="register-username">Escolha um usuário</label>
+                <input id="register-username" type="text" required />
+            </div>
+            <div class="form-group">
+                <label for="register-password">Crie uma senha</label>
+                <input id="register-password" type="password" required />
+            </div>
+            <div class="form-group">
+                <button type="submit">Criar Conta</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="chat-page" class="app-container hidden">
+    <div class="chat-header">
+        <span id="header-username"></span>
+        <div class="header-controls">
+            <button id="theme-toggle">🌙</button>
+            <a href="/logout">Sair</a>
+        </div>
+    </div>
+    <ul id="message-area" class="message-area"></ul>
+    <form id="message-form" name="messageForm">
+        <input type="text" id="message-input" placeholder="Digite uma mensagem..." autocomplete="off"/>
+        <button type="submit">➤</button>
+    </form>
+</div>
+
+<div id="notification"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<script>
+    'use strict';
+
+    // Elementos da UI
+    const authPage = document.querySelector('#auth-page');
+    const chatPage = document.querySelector('#chat-page');
+    const messageForm = document.querySelector('#message-form');
+    const messageInput = document.querySelector('#message-input');
+    const messageArea = document.querySelector('#message-area');
+    const headerUsername = document.querySelector('#header-username');
+    const registerForm = document.querySelector('#register-form');
+    const notification = document.getElementById('notification');
+
+    let stompClient = null;
+    let currentUser = null;
+
+    // Função para mostrar notificação
+    function showNotification(message, isError = false) {
+        notification.textContent = message;
+        notification.style.backgroundColor = isError ? '#e03131' : '#2f9e44';
+        notification.classList.add('show');
+        setTimeout(() => { notification.classList.remove('show'); }, 3000);
+    }
+
+    // Lógica do Registro
+    registerForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const registerButton = registerForm.querySelector('button');
+        registerButton.disabled = true;
+        registerButton.textContent = 'Criando...';
+
+        const username = document.querySelector('#register-username').value.trim();
+        const password = document.querySelector('#register-password').value.trim();
+
+        try {
+            const response = await fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const responseBody = await response.text();
+            if (response.ok) {
+                showNotification(responseBody);
+                document.getElementById('show-login').click();
+                document.getElementById('login-username').value = username;
+                document.getElementById('login-password').focus();
+            } else {
+                showNotification(responseBody, true);
+            }
+        } catch (error) {
+            showNotification("Erro de rede ao tentar registrar.", true);
+        } finally {
+            registerButton.disabled = false;
+            registerButton.textContent = 'Criar Conta';
+        }
+    });
+
+    // Conectar ao WebSocket
+    function connect() {
+        if (currentUser && currentUser.username) {
+            authPage.classList.add('hidden');
+            chatPage.classList.remove('hidden');
+            headerUsername.textContent = currentUser.username;
+
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, onConnected, onError);
+        }
+    }
+
+    function onConnected() {
+        stompClient.subscribe('/topic/public', onMessageReceived);
+        stompClient.send("/app/chat.addUser", {}, JSON.stringify({ sender: currentUser.username, type: 'JOIN' }));
+    }
+
+    function onError(error) {
+        showNotification("Não foi possível conectar ao WebSocket. Tente recarregar a página.", true);
+    }
+
+    function sendMessage(event) {
+        event.preventDefault();
+        const messageContent = messageInput.value.trim();
+        if (messageContent && stompClient) {
+            const chatMessage = { sender: currentUser.username, content: messageContent, type: 'CHAT' };
+            stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+            messageInput.value = '';
+        }
+    }
+
+    // Renderiza a mensagem na tela
+    function onMessageReceived(payload) {
+        const message = JSON.parse(payload.body);
+        const messageElement = document.createElement('li');
+
+        if (message.type === 'JOIN' || message.type === 'LEAVE') {
+            messageElement.classList.add('event-message');
+            messageElement.textContent = message.sender + (message.type === 'JOIN' ? ' entrou no chat!' : ' saiu do chat!');
+        } else {
+            messageElement.classList.add('chat-message');
+            if (message.sender === currentUser.username) {
+                messageElement.classList.add('my-message');
+            }
+
+            const avatar = document.createElement('div');
+            avatar.classList.add('avatar');
+            avatar.textContent = message.sender[0];
+
+            const messageContent = document.createElement('div');
+            messageContent.classList.add('message-content');
+
+            const sender = document.createElement('span');
+            sender.classList.add('sender');
+            sender.textContent = message.sender;
+
+            const text = document.createElement('p');
+            text.classList.add('text');
+            text.textContent = message.content;
+
+            const timestamp = document.createElement('span');
+            timestamp.classList.add('timestamp');
+            timestamp.textContent = new Date(message.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+            messageContent.appendChild(sender);
+            messageContent.appendChild(text);
+            messageContent.appendChild(timestamp);
+            messageElement.appendChild(avatar);
+            messageElement.appendChild(messageContent);
+        }
+
+        messageArea.appendChild(messageElement);
+        messageArea.scrollTop = messageArea.scrollHeight;
+    }
+
+    // Lógica de inicialização da página
+    async function initializeApp() {
+        try {
+            const response = await fetch('/api/users/me');
+            if (response.ok) {
+                currentUser = await response.json();
+                connect();
+            } else {
+                // Usuário não está logado, mostra a página de autenticação
+                authPage.classList.remove('hidden');
+                chatPage.classList.add('hidden');
+            }
+        } catch (error) {
+            showNotification("Não foi possível verificar a autenticação.", true);
+            authPage.classList.remove('hidden');
+            chatPage.classList.add('hidden');
+        }
+    }
+
+    // Alternar abas de Auth
+    document.getElementById('show-login').addEventListener('click', () => {
+        document.getElementById('login-section').classList.remove('hidden');
+        document.getElementById('register-section').classList.add('hidden');
+        document.getElementById('show-login').classList.add('active');
+        document.getElementById('show-register').classList.remove('active');
+    });
+    document.getElementById('show-register').addEventListener('click', () => {
+        document.getElementById('login-section').classList.add('hidden');
+        document.getElementById('register-section').classList.remove('hidden');
+        document.getElementById('show-login').classList.remove('active');
+        document.getElementById('show-register').classList.add('active');
+    });
+
+    // Dark Mode
+    const themeToggle = document.getElementById('theme-toggle');
+    themeToggle.addEventListener('click', () => {
+        document.body.classList.toggle('dark-mode');
+        themeToggle.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+    });
+
+    messageForm.addEventListener('submit', sendMessage, true);
+    initializeApp();
+</script>
+
+</body>
+</html>

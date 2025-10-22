@@ -1,0 +1,31 @@
+# Arquivo docker-compose para iniciar o serviço do banco de dados PostgreSQL.
+# Use 'docker-compose up -d' para iniciar e 'docker-compose down' para parar.
+
+services:
+  # Nome do serviço dentro do docker-compose
+  postgres-db:
+    # Imagem padrão do PostgreSQL, versão 15. É mais robusta e compatível que a 'alpine'.
+    image: postgres:15
+
+    # Nome do contêiner que será criado no Docker. Facilita a identificação.
+    container_name: chat_postgres
+
+    # Variáveis de ambiente para configurar o banco de dados na primeira inicialização.
+    environment:
+      POSTGRES_USER: postgres          # O nome de usuário para se conectar.
+      POSTGRES_PASSWORD: mysecretpassword # A senha para o usuário.
+      POSTGRES_DB: chatdb              # O nome do banco de dados que será criado.
+
+    # Mapeamento de portas. Conecta a porta 5432 da sua máquina (host)
+    # à porta 5432 dentro do contêiner.
+    ports:
+      - "5432:5432"
+
+    # Volumes para persistência de dados.
+    # Isso garante que os dados do seu banco não sejam perdidos se o contêiner for recriado.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+# Define o volume nomeado que será gerenciado pelo Docker.
+volumes:
+  postgres_data:
